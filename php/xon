@@ -1,0 +1,8 @@
+#!/bin/bash
+FILE_OFF=/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini.off
+FILE_ON=/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+
+if test -f "$FILE_OFF"; then
+    sudo mv $FILE_OFF $FILE_ON && kill -USR2 1
+    echo -e "XDEBUG \e[32mhabilitado! \e[39m"
+fi
