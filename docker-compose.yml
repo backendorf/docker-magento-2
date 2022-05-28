@@ -42,6 +42,7 @@ services:
     volumes:
       - ./mysql:/var/lib/mysql
       - ./:/docker
+      - ./dumps/:/dumps
     networks:
       - network1
     command: --max_allowed_packet=32505856
