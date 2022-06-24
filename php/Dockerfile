@@ -48,12 +48,19 @@ RUN curl https://download.libsodium.org/libsodium/releases/libsodium-1.0.18.tar.
         && pecl install -f libsodium
 RUN docker-php-ext-install sodium
 
+#Install mailhog
+RUN wget https://github.com/mailhog/mhsendmail/releases/download/v0.2.0/mhsendmail_linux_amd64
+RUN chmod +x mhsendmail_linux_amd64
+RUN mv mhsendmail_linux_amd64 /usr/local/bin/mhsendmail
+RUN echo "sendmail_path = \"/usr/local/bin/mhsendmail --smtp-addr='mailhog:1025'\"" >> /usr/local/etc/php/conf.d/docker-php-ext-mailhog.ini
 
 # Frontend tools
-#RUN apt-get install -y curl gpgv
-#RUN curl -sL https://deb.nodesource.com/setup_10.x | bash
-#RUN apt-get install -y nodejs
-#RUN sudo npm install grunt-cli -g
+RUN apt-get update
+RUN apt-get install -y curl gpgv
+RUN curl -sL https://deb.nodesource.com/setup_10.x | bash
+RUN apt-get install -y nodejs
+RUN apt-get install -y npm
+RUN npm install grunt-cli -g
 
 #RUN mv /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini.off
 # Install xdebug
