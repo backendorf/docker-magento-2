@@ -41,7 +41,7 @@ services:
       - MYSQL_DATABASE=${STORE_PREFIX}_db
     volumes:
       - ./mysql/data:/var/lib/mysql
-      - ./:/docker
+      - ./mysql/docker:/docker
       - ./dumps/:/dumps
     networks:
       - network1
