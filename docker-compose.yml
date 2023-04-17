@@ -19,8 +19,11 @@ services:
       - network1
 
   php:
-    build: ./php
     container_name: ${STORE_PREFIX}_php
+    build: 
+      context: ./php
+      args:
+        PHP_VERSION: ${PHP_VERSION}
     volumes:
       - ./html:/var/www/html
       - ${COMPOSER_CACHE_PATH}:/var/www/.composer
