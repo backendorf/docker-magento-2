@@ -59,7 +59,6 @@ RUN echo "sendmail_path = \"/usr/local/bin/mhsendmail --smtp-addr='mailhog:1025'
 # Frontend tools
 RUN apt-get update
 RUN apt-get install -y curl gpgv
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash
 RUN apt-get install -y nodejs
 RUN apt-get install -y npm
 RUN npm install grunt-cli -g
