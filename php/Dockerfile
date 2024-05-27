@@ -41,14 +41,6 @@ RUN pecl install -o -f redis \
 # Change memory limit
 RUN echo 'memory_limit = 4G ' >> /usr/local/etc/php/php.ini
 
-# Install newer libsodium
-RUN curl https://download.libsodium.org/libsodium/releases/libsodium-1.0.18.tar.gz -o libsodium-1.0.18.tar.gz \
-        && tar xfvz libsodium-1.0.18.tar.gz \
-        && cd libsodium-1.0.18 \
-        && ./configure \
-        && make && make install \
-        && pecl install -f libsodium
-RUN docker-php-ext-install sodium
 
 #Install mailhog
 RUN wget https://github.com/mailhog/mhsendmail/releases/download/v0.2.0/mhsendmail_linux_amd64

@@ -1,4 +1,3 @@
-version: '3.5'
 services:
   nginx:
     image: nginx
@@ -15,8 +14,6 @@ services:
       - es
       - db
       - php
-    networks:
-      - network1
 
   php:
     container_name: ${STORE_PREFIX}_php
@@ -33,11 +30,9 @@ services:
       - db
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    networks:
-      - network1
 
   db:
-    build: ./mysql
+    image: mysql:debian
     container_name: ${STORE_PREFIX}_db
     ports:
       - 3306:3306
@@ -48,25 +43,18 @@ services:
       - ./mysql/data:/var/lib/mysql
       - ./mysql/docker:/docker
       - ./dumps/:/dumps
-    networks:
-      - network1
     command: --max_allowed_packet=32505856
 
   redis:
     image: redis
     ports:
       - 6379
-    networks:
-      - network1
-
   es:
     build: ./elastic
     ports:
       - "9200:9200"
     volumes:
       - ./elastic/esdata:/usr/share/elasticsearch/data
-    networks:
-      - network1
     environment:
       - discovery.type=single-node
 
@@ -75,9 +63,9 @@ services:
     ports:
       - 1025:1025
       - 8025:8025
-    networks:
-      - network1
 networks:
+  default:
+    name: 'network1'
   network1:
     name: ${STORE_PREFIX}-network
     driver: bridge
