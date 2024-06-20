@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y \
     unzip wget
 
 # Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && composer self-update --1
 
 # Install PDO
 RUN docker-php-ext-install pdo pdo_mysql
@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y \
         libpng-dev \
         vim \
     && docker-php-ext-install -j$(nproc) iconv bcmath \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-configure gd \
     && docker-php-ext-install -j$(nproc) gd
 
 RUN apt-get install -y zlib1g-dev libicu-dev g++ libzip-dev && \
@@ -57,7 +57,7 @@ RUN npm install grunt-cli -g
 
 #RUN mv /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini.off
 # Install xdebug
-RUN pecl install xdebug-3.2.0 \
+RUN pecl install xdebug-3.1.6 \
     && docker-php-ext-enable xdebug \
     && echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
     && echo "xdebug.start_with_request=yes" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
