@@ -41,13 +41,6 @@ RUN pecl install -o -f redis \
 # Change memory limit
 RUN echo 'memory_limit = 4G ' >> /usr/local/etc/php/php.ini
 
-
-#Install mailhog
-RUN wget https://github.com/mailhog/mhsendmail/releases/download/v0.2.0/mhsendmail_linux_amd64
-RUN chmod +x mhsendmail_linux_amd64
-RUN mv mhsendmail_linux_amd64 /usr/local/bin/mhsendmail
-RUN echo "sendmail_path = \"/usr/local/bin/mhsendmail --smtp-addr='mailhog:1025'\"" >> /usr/local/etc/php/conf.d/docker-php-ext-mailhog.ini
-
 # Frontend tools
 RUN apt-get update
 RUN apt-get install -y curl gpgv
