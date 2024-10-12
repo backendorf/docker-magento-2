@@ -1,0 +1,24 @@
+#!/bin/bash
+echo "Installing the latest version of Magento on ${STORE_PREFIX}";
+bin/magento setup:install \
+--base-url=http://${STORE_PREFIX}.localhost/ \
+--db-host=db \
+--db-name=${STORE_PREFIX}_db \
+--db-user=root \
+--db-password=root \
+--admin-firstname=admin \
+--admin-lastname=admin \
+--admin-email=admin@admin.com \
+--admin-user=admin \
+--admin-password=admin123 \
+--language=en_US \
+--currency=USD \
+--timezone=America/Chicago \
+--use-rewrites=1 \
+--search-engine=opensearch \
+--opensearch-host=opensearch \
+--opensearch-port=9200 \
+--opensearch-index-prefix=magento2 \
+--opensearch-timeout=15
+
+echo "All done!! Open the store in http://${STORE_PREFIX}.localhost";

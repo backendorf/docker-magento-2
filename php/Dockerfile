@@ -50,7 +50,7 @@ RUN npm install grunt-cli -g
 
 #RUN mv /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini.off
 # Install xdebug
-RUN pecl install xdebug-3.2.0 \
+RUN pecl install xdebug-3.3.0 \
     && docker-php-ext-enable xdebug \
     && echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
     && echo "xdebug.start_with_request=yes" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
@@ -60,8 +60,13 @@ RUN pecl install xdebug-3.2.0 \
 # Add aliases for xdebug control
 COPY xon /usr/bin/xon
 COPY xoff /usr/bin/xoff
+COPY install-latest /usr/bin/install-latest
+
 RUN chmod +x /usr/bin/xon
 RUN chmod +x /usr/bin/xoff
+RUN chmod +x /usr/bin/install-latest
+
+RUN xoff
 
 # Add user and group
 RUN groupadd -g 1000 app && \

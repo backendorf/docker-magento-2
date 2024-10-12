@@ -9,9 +9,9 @@ services:
     depends_on:
       - db
       - php
-      - es
+      - opensearch
     links:
-      - es
+      - opensearch
       - db
       - php
 
@@ -30,6 +30,8 @@ services:
       - db
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    environment:
+       - STORE_PREFIX=${STORE_PREFIX}   
 
   db:
     image: mysql:debian
@@ -47,21 +49,23 @@ services:
 
   redis:
     image: redis
+    container_name: ${STORE_PREFIX}_redis
     ports:
       - 6379
-  es:
-    build: ./elastic
+  opensearch:
+    image: opensearchproject/opensearch:latest
+    container_name: ${STORE_PREFIX}_opensearch
     ports:
       - "9200:9200"
     volumes:
-      - ./elastic/esdata:/usr/share/elasticsearch/data
+      - ./opensearch:/var/lib/opensearch/data
     environment:
       - discovery.type=single-node
+      - "DISABLE_SECURITY_PLUGIN=true"
 
   mailpit:
     image: axllent/mailpit
-    container_name: mailpit
-    restart: unless-stopped
+    container_name: ${STORE_PREFIX}_mailpit
     volumes:
       - ./mailpit:/data
     ports:
