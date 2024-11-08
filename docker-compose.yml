@@ -31,7 +31,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-       - STORE_PREFIX=${STORE_PREFIX}   
+       - STORE_PREFIX=${STORE_PREFIX}
+       - PHP_IDE_CONFIG=serverName=${STORE_PREFIX}.localhost
 
   db:
     image: mysql:debian
