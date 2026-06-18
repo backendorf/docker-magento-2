@@ -1,896 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MAGENV — Dashboard</title>
-  <link rel="icon" type="image/svg+xml"
-    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Cpath d='M37.5 19.5 L62.5 62.5 H12.5 Z' stroke='%23da1f26' stroke-width='8' stroke-linejoin='round'/%3E%3Cpolygon points='67.5,34.5 87.5,46 87.5,69 67.5,80.5 47.5,69 47.5,46' stroke='%23f46f25' stroke-width='8' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Cpath d='M37.5 19.5 L62.5 62.5 H12.5 Z' stroke='%23da1f26' stroke-width='8' stroke-linejoin='round'/%3E%3Cpolygon points='67.5,34.5 87.5,46 87.5,69 67.5,80.5 47.5,69 47.5,46' stroke='%23f46f25' stroke-width='8' stroke-linejoin='round'/%3E%3C/svg%3E">
+  
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
-    rel="stylesheet">
-  <script src="/config.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Initial Dark Mode Injection to prevent flicker -->
   <script>
-    // System dark mode listener + local storage toggle
-    const getTheme = () => {
-      const stored = localStorage.getItem("theme");
-      if (stored) return stored;
-      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    };
-    if (getTheme() === "dark") {
+    if (localStorage.getItem("theme") === "dark" || (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
       document.documentElement.classList.add("dark");
     }
   </script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ["'Source Sans 3'", "system-ui", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
-            mono: ["'Source Code Pro'", "monospace"],
-          },
-          colors: {
-            spectrum: {
-              bg: "var(--spectrum-global-bg)",
-              panel: "var(--spectrum-panel-bg)",
-              border: "var(--spectrum-border)",
-              "border-hover": "var(--spectrum-border-hover)",
-              primary: "var(--spectrum-text-primary)",
-              secondary: "var(--spectrum-text-secondary)",
-              tertiary: "var(--spectrum-text-tertiary)",
-              accent: "var(--spectrum-accent)",
-              "accent-hover": "var(--spectrum-accent-hover)",
-              success: "var(--spectrum-success)",
-              "success-bg": "var(--spectrum-success-bg)",
-              error: "var(--spectrum-error)",
-              "error-bg": "var(--spectrum-error-bg)",
-            }
-          },
-          borderRadius: {
-            spectrum: "4px",
-            'spectrum-lg': "8px",
-          }
-        }
-      }
-    };
-  </script>
-  <style>
-    :root {
-      /* Adobe Spectrum Light Theme Color Tokens */
-      --spectrum-global-bg: #f8f8f8;
-      --spectrum-panel-bg: #ffffff;
-      --spectrum-border: #e1e1e1;
-      --spectrum-border-hover: #b5b5b5;
-      --spectrum-text-primary: #222222;
-      --spectrum-text-secondary: #5c5c5c;
-      --spectrum-text-tertiary: #747474;
-      --spectrum-accent: #1473e6;
-      --spectrum-accent-hover: #0d66d0;
-      --spectrum-success: #0f7d56;
-      --spectrum-success-bg: rgba(15, 125, 86, 0.08);
-      --spectrum-error: #d7373f;
-      --spectrum-error-bg: rgba(215, 55, 63, 0.08);
-      --spectrum-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
-    }
-
-    .dark {
-      /* Adobe Spectrum Darkest Theme Color Tokens */
-      --spectrum-global-bg: #1d1d1d;
-      --spectrum-panel-bg: #262626;
-      --spectrum-border: #3e3e3e;
-      --spectrum-border-hover: #4b4b4b;
-      --spectrum-text-primary: #f5f5f5;
-      --spectrum-text-secondary: #c8c8c8;
-      --spectrum-text-tertiary: #959595;
-      --spectrum-accent: #2680eb;
-      --spectrum-accent-hover: #378ef0;
-      --spectrum-success: #2d9d78;
-      --spectrum-success-bg: rgba(45, 157, 120, 0.1);
-      --spectrum-error: #ec5b62;
-      --spectrum-error-bg: rgba(236, 91, 98, 0.1);
-      --spectrum-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    #modal {
-      transition: opacity 0.15s ease;
-    }
-
-    #modal-box {
-      transition: transform 0.15s ease, opacity 0.15s ease;
-    }
-
-    /* tabs */
-    .tab-btn {
-      transition: color 0.15s, border-color 0.15s;
-    }
-
-    .tab-panel {
-      display: none;
-    }
-
-    .tab-panel.active {
-      display: block;
-    }
-
-    /* Main page tabs */
-    .main-tab-btn.active {
-      color: var(--spectrum-primary);
-      border-bottom-color: var(--spectrum-accent);
-    }
-
-    /* Hide default scrollbar in tabs header */
-    .scrollbar-none::-webkit-scrollbar {
-      display: none;
-    }
-
-    .scrollbar-none {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-  </style>
 </head>
+<body>
 
-<body class="
-  bg-spectrum-bg text-spectrum-primary
-  h-screen flex flex-col overflow-hidden font-sans">
-
-  <!-- Fixed Header -->
-  <header
-    class="w-full bg-spectrum-panel border-b border-spectrum-border px-6 py-4 flex items-center justify-between shrink-0">
-    <!-- Logo and Wordmark -->
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 flex items-center justify-center select-none shrink-0">
-        <svg class="w-9 h-9" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M37.5 19.5 L62.5 62.5 H12.5 Z" stroke="#da1f26" stroke-width="8" stroke-linejoin="round" />
-          <polygon points="67.5,34.5 87.5,46 87.5,69 67.5,80.5 47.5,69 47.5,46" stroke="#f46f25" stroke-width="8"
-            stroke-linejoin="round" />
-        </svg>
+  <!-- Top Navigation Bar -->
+  <header>
+    <div class="header-left">
+      <div class="logo-text">
+        <span class="orange-1">MAG</span><span class="orange-2">ENV</span>
       </div>
-      <div class="flex flex-col items-start leading-none text-left">
-        <span class="text-xl font-bold tracking-wider" style="letter-spacing: 0.05em;">
-          <span class="text-[#da1f26]">MAG</span><span class="text-[#f46f25]">ENV</span>
-        </span>
+      <div class="status-badge">
+        <span id="header-status-dot" class="status-dot"></span>
+        <span id="title">magenv</span>
       </div>
     </div>
-
-
-    <!-- Right: Theme Toggle -->
-    <button onclick="toggleTheme()"
-      class="p-1.5 rounded-spectrum text-spectrum-secondary hover:text-spectrum-primary hover:bg-spectrum-bg border border-transparent hover:border-spectrum-border transition-colors"
-      title="Toggle theme">
-      <svg id="theme-icon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
-      </svg>
-    </button>
+    
+    <div class="header-right">
+      <button onclick="toggleTheme()" class="btn-icon" title="Toggle dark/light mode">
+        <svg id="theme-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+        </svg>
+      </button>
+    </div>
   </header>
 
-  <!-- Scrollable Main Container -->
-  <main class="flex-1 overflow-y-auto w-full p-6 sm:p-8 flex flex-col items-center gap-6">
-
-    <!-- Service Cards (full width) -->
-    <section class="w-full max-w-5xl">
-      <h3 class="text-[11px] uppercase tracking-widest font-bold text-spectrum-tertiary mb-3">Services</h3>
-      <div class="grid grid-cols-5 gap-4" id="cards"></div>
+  <!-- Scrollable Dashboard Content -->
+  <main>
+    
+    <!-- Services Section -->
+    <section>
+      <h3 class="section-title">Services</h3>
+      <div class="services-grid" id="cards">
+        <!-- Injected dynamically by app.js -->
+      </div>
     </section>
 
-    <!-- Tabs: Quick Commands / Guided Installation / FAQ -->
-    <section class="w-full max-w-5xl flex flex-col">
-      <!-- Tab Bar -->
-      <div class="flex gap-0 border-b border-spectrum-border mb-0 shrink-0">
-        <button onclick="switchMainTab('tab-commands')"
-          id="btn-tab-commands"
-          class="main-tab-btn px-4 py-2.5 text-xs font-semibold text-spectrum-secondary border-b-2 border-transparent hover:text-spectrum-primary transition-colors -mb-px">
-          Quick Commands
-        </button>
-        <button onclick="switchMainTab('tab-install')"
-          id="btn-tab-install"
-          class="main-tab-btn px-4 py-2.5 text-xs font-semibold text-spectrum-secondary border-b-2 border-transparent hover:text-spectrum-primary transition-colors -mb-px">
-          Guided Installation
-        </button>
-        <button onclick="switchMainTab('tab-faq')"
-          id="btn-tab-faq"
-          class="main-tab-btn px-4 py-2.5 text-xs font-semibold text-spectrum-secondary border-b-2 border-transparent hover:text-spectrum-primary transition-colors -mb-px">
-          FAQ
-        </button>
-      </div>
+    <!-- Information and Utilities Section -->
+    <section>
+      <div class="tabs-container">
+        <div class="tabs-nav">
+          <button onclick="switchMainTab('tab-commands')" id="btn-tab-commands" class="tab-nav-btn active">Quick Commands</button>
+          <button onclick="switchMainTab('tab-install')" id="btn-tab-install" class="tab-nav-btn">Guided Installation</button>
+          <button onclick="switchMainTab('tab-skills')" id="btn-tab-skills" class="tab-nav-btn">IA Skills</button>
+          <button onclick="switchMainTab('tab-faq')" id="btn-tab-faq" class="tab-nav-btn">FAQ</button>
+        </div>
 
-      <!-- Quick Commands Panel -->
-      <div id="tab-commands" class="main-tab-panel pt-4">
-        <div class="bg-spectrum-panel border border-spectrum-border rounded-spectrum shadow-sm divide-y divide-spectrum-border/60" id="howto"></div>
-      </div>
+        <!-- Tab Panel: Quick Commands -->
+        <div id="tab-commands" class="tab-content-panel active">
+          <div class="commands-list" id="howto">
+            <!-- Injected dynamically by app.js -->
+          </div>
+        </div>
 
-      <!-- Guided Installation Panel -->
-      <div id="tab-install" class="main-tab-panel pt-4 hidden">
-        <p class="text-[11px] text-spectrum-secondary mb-4">
-          Run <code class="bg-spectrum-bg px-1.5 py-0.5 border border-spectrum-border rounded font-mono text-spectrum-primary">./magenv install</code>
-          in your shell — the script guides you step-by-step.
-        </p>
-        <div class="flex flex-col gap-3" id="install-options"></div>
-      </div>
+        <!-- Tab Panel: Guided Installation Steps -->
+        <div id="tab-install" class="tab-content-panel">
+          <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 16px;">
+            Run <code style="font-size: 0.8em;">./magenv install</code> in your terminal to begin the configuration workflow.
+          </div>
+          <div class="installation-grid" id="install-options">
+            <!-- Injected dynamically by app.js -->
+          </div>
+        </div>
 
-      <!-- FAQ Panel -->
-      <div id="tab-faq" class="main-tab-panel pt-4 hidden">
-        <div class="bg-spectrum-panel border border-spectrum-border rounded-spectrum divide-y divide-spectrum-border shadow-sm overflow-hidden" id="faq"></div>
+        <!-- Tab Panel: IA Skills -->
+        <div id="tab-skills" class="tab-content-panel">
+          <div class="coming-soon-wrapper">
+            <span class="coming-soon-label">Coming Soon</span>
+          </div>
+        </div>
+
+        <!-- Tab Panel: FAQ Accordion -->
+        <div id="tab-faq" class="tab-content-panel">
+          <div class="faq-list" id="faq">
+            <!-- Injected dynamically by app.js -->
+          </div>
+        </div>
       </div>
     </section>
 
   </main>
 
-  <!-- Fixed Footer -->
-  <footer class="w-full bg-spectrum-panel border-t border-spectrum-border px-6 py-2.5 flex items-center justify-between shrink-0">
-    <span class="text-[11px] text-spectrum-tertiary">Made with 🇧🇷 in Brazil</span>
-    <a href="https://github.com/backendorf/magenv" target="_blank"
-      class="flex items-center gap-1.5 text-[11px] text-spectrum-secondary hover:text-spectrum-accent transition-colors font-medium">
-      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+  <!-- Footer -->
+  <footer>
+    <span>Made with 🇧🇷 in Brazil</span>
+    <a href="https://github.com/backendorf/magenv" target="_blank" class="footer-link">
+      <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: block;">
         <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.34-3.369-1.34-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
       </svg>
       <span>backendorf/magenv</span>
     </a>
   </footer>
 
-  <!-- Modal (Spectrum Dialog style) -->
-  <div id="modal"
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200"
-    onclick="if(event.target===this) closeModal()">
-    <div class="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"></div>
-    <div id="modal-box"
-      class="relative z-10
-                bg-spectrum-panel border border-spectrum-border shadow-xl
-                rounded-spectrum w-full max-w-2xl max-h-[85vh] flex flex-col translate-y-2 opacity-0 transition-all duration-200">
-
-      <!-- Modal Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-spectrum-border">
-        <div class="flex items-center gap-3" id="modal-header"></div>
-        <button onclick="closeModal()"
-          class="text-spectrum-secondary hover:text-spectrum-primary p-1.5 rounded-spectrum hover:bg-spectrum-bg border border-transparent hover:border-spectrum-border transition-colors shadow-none"
-          title="Close dialog">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-            <path d="M18 6 6 18M6 6l12 12" />
+  <!-- Dialog Modal -->
+  <div id="modal" class="modal-overlay" onclick="if(event.target===this) closeModal()">
+    <div class="modal-backdrop"></div>
+    <div id="modal-box" class="modal-wrapper">
+      <div class="modal-header">
+        <div class="modal-header-content" id="modal-header">
+          <!-- Injected dynamically -->
+        </div>
+        <button onclick="closeModal()" class="modal-close-btn" title="Close dialog">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M18 6 6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
       </div>
-
-      <!-- Modal Body -->
-      <div class="p-6 overflow-y-auto flex-1 text-left" id="modal-body"></div>
+      <div class="modal-body" id="modal-body">
+        <!-- Injected dynamically -->
+      </div>
     </div>
   </div>
 
-  <!-- Toast container for copy feedback -->
-  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
 
-  <script>
-    const prefix = typeof STORE_PREFIX !== "undefined" ? STORE_PREFIX : "magenv";
-    const phpVer = typeof PHP_VERSION !== "undefined" ? PHP_VERSION : "—";
-    const phpMem = typeof PHP_MEMORY_LIMIT !== "undefined" ? PHP_MEMORY_LIMIT : "—";
-    const xdebugVer = typeof XDEBUG_VERSION !== "undefined" ? XDEBUG_VERSION : "—";
-    const mysqlVer = typeof MYSQL_VERSION !== "undefined" ? MYSQL_VERSION : "—";
-    const adminUser = typeof ADMIN_USER !== "undefined" ? ADMIN_USER : "admin";
-    const adminPass = typeof ADMIN_PASSWORD !== "undefined" ? ADMIN_PASSWORD : "—";
-    const adminFront = typeof ADMIN_FRONTNAME !== "undefined" ? ADMIN_FRONTNAME : "admin";
-    const dbName = typeof MYSQL_DATABASE !== "undefined" ? MYSQL_DATABASE : "—";
-    const dbUser = typeof MYSQL_USER !== "undefined" ? MYSQL_USER : "—";
-    const dbPass = typeof MYSQL_PASSWORD !== "undefined" ? MYSQL_PASSWORD : "—";
-
-
-    // ── theme handler ────────────────────────────────────────────────────────
-    function updateThemeUI() {
-      const isDark = document.documentElement.classList.contains("dark");
-      const icon = document.getElementById("theme-icon");
-      if (!icon) return;
-      if (isDark) {
-        icon.innerHTML = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
-      } else {
-        icon.innerHTML = `<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>`;
-      }
-    }
-    updateThemeUI();
-
-    // ── main tabs ────────────────────────────────────────────────────────────
-    function switchMainTab(tabId) {
-      document.querySelectorAll(".main-tab-panel").forEach(p => p.classList.add("hidden"));
-      document.querySelectorAll(".main-tab-btn").forEach(b => b.classList.remove("active"));
-      document.getElementById(tabId).classList.remove("hidden");
-      document.getElementById("btn-" + tabId).classList.add("active");
-    }
-    switchMainTab("tab-commands");
-
-    // Toggle theme state
-    function toggleTheme() {
-      const isDark = document.documentElement.classList.toggle("dark");
-      localStorage.setItem("theme", isDark ? "dark" : "light");
-      updateThemeUI();
-      updateAllStatuses(); // Re-apply inline borders/icons immediately
-    }
-
-    // ── clipboard and toast ──────────────────────────────────────────────────
-    function copyText(btn, text, label) {
-      navigator.clipboard.writeText(text).then(() => {
-        showToast(`Copied: ${label}`);
-
-        // Visual button checkmark feedback
-        const isCmdBtn = btn.querySelector('.btn-text') !== null;
-        const originalHTML = btn.innerHTML;
-
-        if (isCmdBtn) {
-          btn.innerHTML = `
-            <svg class="w-2.5 h-2.5 text-spectrum-success" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-            </svg>
-            <span class="text-spectrum-success text-[10px] font-bold">Copied</span>
-          `;
-          btn.classList.add("border-spectrum-success");
-        } else {
-          btn.innerHTML = `
-            <svg class="w-3.5 h-3.5 text-spectrum-success" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-            </svg>
-          `;
-        }
-
-        setTimeout(() => {
-          btn.innerHTML = originalHTML;
-          if (isCmdBtn) {
-            btn.classList.remove("border-spectrum-success");
-          }
-        }, 1200);
-      });
-    }
-
-    function showToast(message) {
-      const container = document.getElementById("toast-container");
-      const toast = document.createElement("div");
-      toast.className = "flex items-center gap-2.5 bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 px-4 py-3 rounded-spectrum shadow-lg text-xs font-bold pointer-events-auto transition-all duration-200 transform translate-y-2 opacity-0 border border-neutral-800 dark:border-neutral-200";
-      toast.innerHTML = `
-        <svg class="w-4 h-4 text-green-400 dark:text-green-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>${message}</span>
-      `;
-      container.appendChild(toast);
-      setTimeout(() => {
-        toast.classList.remove("translate-y-2", "opacity-0");
-      }, 10);
-      setTimeout(() => {
-        toast.classList.add("translate-y-2", "opacity-0");
-        setTimeout(() => toast.remove(), 200);
-      }, 2000);
-    }
-
-    // ── helpers ───────────────────────────────────────────────────────────────
-    const row = (label, value, copyValue = null) => {
-      const rawCopy = copyValue !== null ? copyValue : value;
-      const copyBtn = copyValue !== false ? `
-        <button onclick="copyText(this, '${rawCopy.replace(/'/g, "\\'")}', '${label}')" 
-                class="text-spectrum-secondary hover:text-spectrum-primary p-1 rounded-spectrum hover:bg-spectrum-panel border border-transparent hover:border-spectrum-border transition-colors ml-1" 
-                title="Copy to clipboard">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-          </svg>
-        </button>
-      ` : "";
-      return `<div class="flex items-center justify-between gap-6 py-2.5 border-b border-spectrum-border/60 last:border-0">
-         <span class="text-xs text-spectrum-secondary shrink-0 font-medium">${label}</span>
-         <span class="text-xs text-spectrum-primary font-mono text-right flex items-center gap-1.5 max-w-xs truncate">
-           <span class="truncate font-semibold">${value}</span>
-           ${copyBtn}
-         </span>
-       </div>`;
-    };
-
-    const tab = (title, rows) => ({ title, content: rows.join("") });
-
-    const renderTabs = (tabs, accent = "var(--spectrum-accent)", footerHtml = "") => {
-      const id = "tabs-" + Math.random().toString(36).slice(2);
-      const buttons = tabs.map((t, i) =>
-        `<button
-           class="tab-btn pb-2.5 text-xs font-bold border-b-2 border-transparent text-spectrum-tertiary hover:text-spectrum-primary whitespace-nowrap transition-colors ${i === 0 ? "active text-spectrum-primary" : ""}"
-           style="${i === 0 ? `border-bottom-color: var(--spectrum-accent)` : ''}"
-           onclick="switchTab('${id}', ${i}, this)">
-           ${t.title}
-         </button>`
-      ).join("");
-
-      const panels = tabs.map((t, i) =>
-        `<div class="tab-panel ${i === 0 ? "active" : ""}" data-panel="${id}-${i}">
-           <div class="bg-spectrum-bg border border-spectrum-border rounded-spectrum px-4 py-2 mt-3 shadow-inner">${t.content}</div>
-         </div>`
-      ).join("");
-
-      return `<div id="${id}" class="flex flex-col">
-        <div class="flex gap-4 border-b border-spectrum-border mb-1 overflow-x-auto scrollbar-none">${buttons}</div>
-        ${panels}
-        ${footerHtml}
-      </div>`;
-    };
-
-    const cmdRow = (c, desc, highlight = false) =>
-      `<div class="flex items-center justify-between gap-4 py-2.5 px-3.5 hover:bg-spectrum-bg/30 transition-colors">
-         <div class="flex flex-col gap-0.5 min-w-0 text-left">
-           <code class="text-xs ${highlight ? "text-spectrum-accent font-bold" : "text-spectrum-primary"} font-mono truncate">${c}</code>
-           <span class="text-[10px] text-spectrum-secondary leading-snug truncate">${desc}</span>
-         </div>
-         <button onclick="copyText(this, '${c.replace(/'/g, "\\'")}', 'Command')" 
-                 class="flex items-center justify-center text-spectrum-secondary hover:text-spectrum-primary p-1.5 rounded-spectrum hover:bg-spectrum-bg border border-transparent hover:border-spectrum-border transition-colors shrink-0"
-                 title="Copy command">
-           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-         </button>
-       </div>`;
-
-    const pill = (text, color) =>
-      `<span class="text-[9px] px-2 py-0.5 rounded font-mono border" style="background:${color}12;color:${color};border-color:${color}20">${text}</span>`;
-
-    const codeSpan = (t) => `<code class="bg-spectrum-bg text-spectrum-secondary px-1 rounded font-mono text-[11px] border border-spectrum-border">${t}</code>`;
-
-    // ── services ─────────────────────────────────────────────────────────────
-    const services = [
-      {
-        label: "Magento / PHP", title: "Magento", subtitle2: `PHP ${phpVer}`,
-        accent: "#f46f25",
-        url: `http://${prefix}.localhost`,
-        subtitle: `${prefix}.localhost`,
-        logo: `<div class="flex items-center gap-1.5">
-                 <!-- Adobe Commerce (Magento) official logo -->
-                 <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/magento/magento-original.svg" class="w-6 h-6 shrink-0" />
-                 <span class="text-spectrum-tertiary text-base font-light">/</span>
-                 <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg" class="w-6 h-6 shrink-0" />
-               </div>`,
-        modal: (accent) => renderTabs([
-          tab("URLs", [
-            row("Store", `<a href="http://${prefix}.localhost" target="_blank" class="text-spectrum-accent hover:underline">http://${prefix}.localhost</a>`, `http://${prefix}.localhost`),
-            row("Admin", `<a href="http://${prefix}.localhost/${adminFront}" target="_blank" class="text-spectrum-accent hover:underline">http://${prefix}.localhost/${adminFront}</a>`, `http://${prefix}.localhost/${adminFront}`),
-          ]),
-          tab("Credentials", [
-            row("User", adminUser),
-            row("Password", adminPass),
-          ]),
-          tab("PHP", [
-            row("PHP", phpVer),
-            row("memory_limit", phpMem),
-            row("Xdebug", xdebugVer),
-            row("Xdebug mode", "off by default"),
-          ]),
-          tab("Extensions", [
-            `<div class="flex flex-wrap gap-1.5 py-2">${["pdo_mysql", "gd", "bcmath", "intl", "zip", "sockets", "xsl", "soap", "mysqli", "ftp", "pcntl"].map(e => pill(e, "#777bb4")).join("")}</div>`,
-          ]),
-          tab("Xdebug", [
-            row("Toggle Xdebug", `run ${codeSpan("x")} inside ${codeSpan("./magenv php")}`, false),
-          ]),
-        ], accent,
-          `<a href="http://${prefix}.localhost" target="_blank"
-          class="mt-4 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-spectrum text-xs font-bold bg-spectrum-accent hover:bg-spectrum-accent-hover text-white transition-colors border border-transparent shadow-sm">
-          <span>Open Magento</span>
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </a>`),
-      },
-      {
-        label: "Database", title: "MySQL", subtitle2: "3306", accent: "#00758f",
-        url: null,
-        logo: `<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg" class="w-7 h-7" />`,
-        modal: (accent) => renderTabs([
-          tab("Connection", [
-            row("Host (local)", "localhost"),
-            row("Host (docker)", "db"),
-            row("Port", "3306"),
-            row("Database", dbName),
-            row("User", dbUser),
-            row("Password", dbPass),
-          ]),
-          tab("Commands", [
-            row("MySQL shell", "./magenv db"),
-            row("Import dump", "./magenv import-db"),
-            row("Dump path", "dumps/import.sql"),
-          ]),
-        ], accent),
-      },
-      {
-        label: "Web Server", title: "Nginx", subtitle2: "80", accent: "#009639",
-        url: null,
-        logo: `<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nginx/nginx-original.svg" class="w-7 h-7" />`,
-        modal: (accent) => renderTabs([
-          tab("Hosts", [
-            row("Dashboard", "localhost"),
-            row("Store", `${prefix}.localhost`),
-            row("Mailpit", "mailpit.localhost"),
-          ]),
-          tab("Ports", [
-            row("HTTP", "80"),
-          ]),
-          tab("Config", [
-            row("Nginx Conf", "docker/nginx.default.conf"),
-            row("Magento Conf", "docker/nginx-magento/"),
-          ]),
-        ], accent),
-      },
-      {
-        label: "Search", title: "OpenSearch", subtitle2: "9200", accent: "#005EB8",
-        url: "http://localhost:9200",
-        subtitle: "localhost:9200",
-        logo: `<svg class="w-7 h-7" viewBox="0 0 64 64" fill="none">
-                 <circle cx="32" cy="32" r="30" fill="#005EB8" opacity="0.15"/>
-                 <path d="M16 32a16 16 0 0 1 26.5-12.1" stroke="#005EB8" stroke-width="4" stroke-linecap="round" fill="none"/>
-                 <path d="M48 32a16 16 0 0 1-26.5 12.1" stroke="#57c5f7" stroke-width="4" stroke-linecap="round" fill="none"/>
-                 <circle cx="44" cy="44" r="5" fill="#005EB8"/>
-                 <line x1="47.5" y1="47.5" x2="53" y2="53" stroke="#005EB8" stroke-width="3.5" stroke-linecap="round"/>
-               </svg>`,
-        modal: (accent) => renderTabs([
-          tab("Connection", [
-            row("API URL", `<a href="http://localhost:9200" target="_blank" class="text-spectrum-accent hover:underline">localhost:9200</a>`, "http://localhost:9200"),
-            row("Port", "9200"),
-            row("Security", "disabled"),
-          ]),
-          tab("Settings", [
-            row("Java heap", "512m – 512m"),
-            row("Index prefix", prefix),
-          ]),
-        ], accent,
-          `<a href="http://localhost:9200" target="_blank"
-          class="mt-4 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-spectrum text-xs font-bold bg-spectrum-accent hover:bg-spectrum-accent-hover text-white transition-colors border border-transparent shadow-sm">
-          <span>Open OpenSearch</span>
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </a>`),
-      },
-      {
-        label: "Email", title: "Mailpit", subtitle2: "mailpit.localhost", accent: "#6366f1",
-        url: "http://mailpit.localhost",
-        subtitle: "mailpit.localhost",
-        logo: `<svg class="w-7 h-7" viewBox="0 0 64 64" fill="none">
-                 <rect x="6" y="14" width="52" height="36" rx="5" fill="#6366f1" opacity="0.15" stroke="#6366f1" stroke-width="3"/>
-                 <polyline points="6,14 32,36 58,14" stroke="#6366f1" stroke-width="3" stroke-linejoin="round" fill="none"/>
-               </svg>`,
-        modal: (accent) => renderTabs([
-          tab("Access", [
-            row("Web UI", `<a href="http://mailpit.localhost" target="_blank" class="text-spectrum-accent hover:underline">mailpit.localhost</a>`, "http://mailpit.localhost"),
-            row("Web Port", "8025"),
-            row("SMTP Port", "1025"),
-            row("SMTP Host", "mailpit"),
-          ]),
-          tab("Settings", [
-            row("Max messages", "5000"),
-            row("Auth", "any credentials accepted"),
-          ]),
-        ], accent,
-          `<a href="http://mailpit.localhost" target="_blank"
-          class="mt-4 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-spectrum text-xs font-bold bg-spectrum-accent hover:bg-spectrum-accent-hover text-white transition-colors border border-transparent shadow-sm">
-          <span>Open Mailpit</span>
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </a>`),
-      },
-    ];
-
-    // ── render cards ──────────────────────────────────────────────────────────
-    const cardsEl = document.getElementById("cards");
-    services.forEach((s, i) => {
-      const subtitle = s.subtitle
-        ? `<p class="text-xs font-mono text-spectrum-tertiary mt-0.5">${s.subtitle}</p>`
-        : "";
-      const subtitle2 = s.subtitle2
-        ? s.subtitle2
-        : "";
-
-      const openBtn = s.url ? `
-        <a href="${s.url}" target="_blank" onclick="event.stopPropagation()"
-           class="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-spectrum bg-spectrum-accent hover:bg-spectrum-accent-hover text-white transition-colors border border-transparent shadow-sm shrink-0">
-          <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-            <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-          </svg>
-          <span>Open</span>
-        </a>` : "";
-
-      cardsEl.innerHTML += `
-        <div onclick="openService(${i})" id="card-container-${i}" data-accent="${s.accent}"
-             class="group relative bg-spectrum-panel border border-spectrum-border rounded-spectrum p-4 cursor-pointer transition-all duration-200 flex flex-col justify-between hover:border-spectrum-border-hover hover:shadow-md overflow-hidden"
-             style="box-shadow: var(--spectrum-shadow);">
-          <!-- Top row: Logo and Status Light -->
-          <div class="flex items-start justify-between w-full gap-1">
-            <div class="p-2 bg-spectrum-bg border border-spectrum-border rounded-spectrum group-hover:scale-105 transition-transform duration-200 shrink-0">
-              ${s.logo}
-            </div>
-            <!-- Status Light dot -->
-            <div class="flex items-center gap-1 min-w-0" id="card-status-container-${i}">
-              <span id="card-status-dot-${i}" class="inline-block w-2 h-2 rounded-full bg-spectrum-tertiary shrink-0"></span>
-              <span id="card-status-text-${i}" class="text-[9px] font-bold text-spectrum-tertiary uppercase tracking-wider truncate">Checking</span>
-            </div>
-          </div>
-
-          <!-- Middle row: Content -->
-          <div class="mt-2 text-left flex-1 flex flex-col justify-end">
-            <span class="text-[9px] font-bold text-spectrum-tertiary uppercase tracking-wider block truncate">${s.label}</span>
-            <h3 class="text-sm font-bold text-spectrum-primary mt-0.5 leading-tight truncate">${s.title}</h3>
-            ${subtitle}
-          </div>
-
-          <!-- Bottom row: Actions -->
-          <div class="flex items-center justify-between mt-2 pt-2 border-t border-spectrum-border/60 gap-1 min-w-0">
-            <span class="text-[10px] font-mono text-spectrum-secondary truncate">${subtitle2}</span>
-            ${openBtn}
-          </div>
-        </div>`;
-    });
-
-    // ── how to use ───────────────────────────────────────────────────────────
-    const howToRows = [
-      ["./magenv install", "Full Magento installation (interactive)", true],
-      ["./magenv up", "Start containers &amp; open browser"],
-      ["./magenv stop", "Stop containers (data preserved)"],
-      ["./magenv down", "Remove containers (volumes preserved)"],
-      ["./magenv php", "Shell into the PHP container"],
-      ["./magenv db", "MySQL CLI inside DB container"],
-      ["./magenv import-db", "Import dumps/import.sql"],
-    ];
-
-    const howtoEl = document.getElementById("howto");
-    howtoEl.innerHTML = howToRows.map(([c, desc, hi]) => cmdRow(c, desc, hi)).join("");
-
-    // ── guided install ────────────────────────────────────────────────────────
-    const installOptions = [
-      {
-        step: "01",
-        title: "Store prefix",
-        desc: "Sets the store URL and database name. E.g. <code>mystore</code> → <code>mystore.localhost</code>.",
-        accent: "#f46f25",
-        icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"/></svg>`,
-      },
-      {
-        step: "02",
-        title: "Distribution",
-        desc: "Choose between the official Adobe/Magento repository or Mage-OS community fork.",
-        accent: "#e74c3c",
-        options: ["Magento (official)", "Mage-OS"],
-        icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m20.893 13.393-1.135-1.135a2.252 2.252 0 0 1-.421-.585l-1.08-2.16a.414.414 0 0 0-.663-.107.827.827 0 0 1-.812.21l-1.273-.363a.89.89 0 0 0-.738 1.595l.587.39c.59.395.674 1.23.172 1.732l-.2.2c-.212.212-.33.498-.33.796v.41c0 .409-.11.809-.32 1.158l-1.315 2.191a2.11 2.11 0 0 1-1.81 1.025 1.055 1.055 0 0 1-1.055-1.055v-1.172c0-.92-.56-1.747-1.414-2.089l-.655-.261a2.25 2.25 0 0 1-1.383-2.46l.007-.042a2.25 2.25 0 0 1 .29-.787l.09-.15a2.25 2.25 0 0 1 2.37-1.048l1.178.236a1.125 1.125 0 0 0 1.302-.795l.208-.73a1.125 1.125 0 0 0-.578-1.315l-.665-.332-.091.091a2.25 2.25 0 0 1-1.591.659h-.18c-.249 0-.487.1-.662.274a.931.931 0 0 1-1.458-1.137l1.411-2.353a2.25 2.25 0 0 0 .286-.76m11.928 9.869A9 9 0 0 0 8.965 3.525m11.928 9.868A9 9 0 1 1 8.965 3.525"/></svg>`,
-      },
-      {
-        step: "03",
-        title: "Version",
-        desc: "Pin a specific release (e.g. <code>2.4.7</code>) or leave blank to automatically get the latest stable.",
-        accent: "#8e44ad",
-        icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z"/></svg>`,
-      },
-      {
-        step: "04",
-        title: "Theme",
-        desc: "Start with Hyvä (fast, modern, React-free) or fall back to classic Luma theme.",
-        accent: "#16a34a",
-        options: ["Hyvä (default)", "Luma"],
-        icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"/></svg>`,
-      },
-      {
-        step: "05",
-        title: "Sample data",
-        desc: "Optionally install Magento's demo catalog to test pages out of the box.",
-        accent: "#0891b2",
-        options: ["Yes", "No (default)"],
-        icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg>`,
-      },
-    ];
-
-    const installEl = document.getElementById("install-options");
-    installEl.innerHTML = installOptions.map(({ step, title, desc, accent, options, icon }) => {
-      const badges = options
-        ? `<div class="flex flex-wrap gap-1 mt-2">${options.map(o =>
-          `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-spectrum border bg-spectrum-bg text-spectrum-secondary border-spectrum-border">${o}</span>`
-        ).join("")}</div>`
-        : "";
-      return `
-        <div class="flex gap-3.5 items-start p-3.5 bg-spectrum-panel border border-spectrum-border rounded-spectrum hover:border-spectrum-border-hover transition-colors shadow-sm text-left">
-          <div class="p-1.5 rounded-spectrum bg-spectrum-bg shrink-0" style="color: ${accent}">
-            ${icon}
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between gap-2 mb-0.5">
-              <h4 class="text-xs font-bold text-spectrum-primary">${title}</h4>
-              <span class="text-[9px] font-mono font-bold text-spectrum-tertiary uppercase">Step ${step}</span>
-            </div>
-            <p class="text-[11px] text-spectrum-secondary leading-normal">${desc}</p>
-            ${badges}
-          </div>
-        </div>`;
-    }).join("");
-
-    // ── faq ───────────────────────────────────────────────────────────────────
-    const faqs = [
-      {
-        q: "Do I need to edit /etc/hosts?",
-        a: "No. <code>.localhost</code> resolves to <code>127.0.0.1</code> automatically in all modern browsers — no host file changes needed.",
-      },
-      {
-        q: "Can I run multiple stores at the same time?",
-        a: "Each magenv instance is one store. Clone the repository into a separate folder for each project — ports don't conflict because each instance runs isolated.",
-      },
-      {
-        q: "How do I change the PHP version?",
-        a: "Edit <code>PHP_VERSION</code> in <code>.env</code> (e.g. <code>8.3-fpm</code>), then run <code>./magenv down && ./magenv up</code> to rebuild the PHP container.",
-      },
-      {
-        q: "How do I enable Xdebug?",
-        a: "Shell into the PHP container with <code>./magenv php</code> and run <code>x</code>. It toggles between <code>debug</code> and <code>off</code>. Xdebug is off by default to keep performance fast.",
-      },
-      {
-        q: "How do I import a database dump?",
-        a: "Place the file at <code>dumps/import.sql</code> and run <code>./magenv import-db</code>. The script imports it directly into the database defined in <code>.env</code>.",
-      },
-      {
-        q: "Where do outgoing emails go?",
-        a: "All email is captured by Mailpit. No mail leaves your machine. Access the inbox at <a href='http://mailpit.localhost' target='_blank' class='text-spectrum-accent hover:underline font-semibold'>mailpit.localhost</a> — any credentials work.",
-      },
-      {
-        q: "Is 2FA enabled on the admin?",
-        a: "No. Two-Factor Authentication (<code>Magento_TwoFactorAuth</code>) is disabled automatically during install so you can log in directly with user and password.",
-      },
-      {
-        q: "What happens to my data when I run ./magenv down?",
-        a: "Containers are removed but Docker volumes are preserved, so your database and files survive. Use <code>./magenv up</code> to bring everything back.",
-      },
-    ];
-
-    const faqEl = document.getElementById("faq");
-    faqs.forEach(({ q, a }, i) => {
-      const id = `faq-${i}`;
-      faqEl.innerHTML += `
-        <div class="hover:bg-spectrum-bg/20 transition-colors">
-          <button onclick="toggleFaq('${id}')"
-            class="w-full flex items-center justify-between gap-4 px-4 py-3 text-left group">
-            <span class="text-xs font-semibold text-spectrum-primary group-hover:text-spectrum-accent transition-colors">${q}</span>
-            <svg id="${id}-icon" class="w-3.5 h-3.5 shrink-0 text-spectrum-secondary group-hover:text-spectrum-primary transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-              <path d="M19 9l-7 7-7-7"/>
-            </svg>
-          </button>
-          <div id="${id}" class="hidden px-4 pb-3.5 pt-1 border-t border-spectrum-border/30 bg-spectrum-bg/10">
-            <p class="text-[11px] text-spectrum-secondary leading-normal">${a}</p>
-          </div>
-        </div>`;
-    });
-
-    function toggleFaq(id) {
-      const panel = document.getElementById(id);
-      const icon = document.getElementById(id + "-icon");
-      const open = !panel.classList.contains("hidden");
-      panel.classList.toggle("hidden", open);
-      icon.style.transform = open ? "" : "rotate(180deg)";
-    }
-
-    // ── tab switching ─────────────────────────────────────────────────────────
-    function switchTab(containerId, idx, btn) {
-      const container = document.getElementById(containerId);
-      container.querySelectorAll(".tab-btn").forEach(b => {
-        b.classList.remove("active", "text-spectrum-primary");
-        b.classList.add("text-spectrum-tertiary");
-        b.style.borderBottomColor = "transparent";
-      });
-      btn.classList.add("active", "text-spectrum-primary");
-      btn.classList.remove("text-spectrum-tertiary");
-      btn.style.borderBottomColor = "var(--spectrum-accent)";
-      container.querySelectorAll(".tab-panel").forEach((p, i) => {
-        p.classList.toggle("active", i === idx);
-      });
-    }
-
-    // ── modal logic ───────────────────────────────────────────────────────────
-    function openModal(headerHtml, bodyHtml) {
-      document.getElementById("modal-header").innerHTML = headerHtml;
-      document.getElementById("modal-body").innerHTML = bodyHtml;
-      const modal = document.getElementById("modal");
-      const box = document.getElementById("modal-box");
-      modal.classList.remove("opacity-0", "pointer-events-none");
-      setTimeout(() => box.classList.remove("translate-y-2", "opacity-0"), 10);
-      document.addEventListener("keydown", escListener);
-    }
-
-    function closeModal() {
-      const box = document.getElementById("modal-box");
-      box.classList.add("translate-y-2", "opacity-0");
-      const modal = document.getElementById("modal");
-      modal.classList.add("opacity-0");
-      setTimeout(() => modal.classList.add("pointer-events-none"), 150);
-      document.removeEventListener("keydown", escListener);
-    }
-
-    function escListener(e) { if (e.key === "Escape") closeModal(); }
-
-    function openService(i) {
-      const s = services[i];
-      const header = `
-        <div class="p-2 bg-spectrum-bg rounded-spectrum border border-spectrum-border shrink-0">${s.logo}</div>
-        <div class="text-left">
-          <span class="text-[10px] uppercase tracking-widest font-bold text-spectrum-tertiary block">${s.label}</span>
-          <h2 class="font-bold text-base text-spectrum-primary mt-0.5 leading-tight">${s.title} Details</h2>
-        </div>`;
-      const body = s.modal(s.accent);
-      openModal(header, body);
-    }
-
-    // ── real-time status validation (pings) ──────────────────────────────────
-    async function checkService(url) {
-      if (!url) return true;
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 1500);
-        await fetch(url, { mode: "no-cors", signal: controller.signal });
-        clearTimeout(timeout);
-        return true;
-      } catch (err) {
-        if (err.name === "AbortError") return false;
-        return false; // Connection refused
-      }
-    }
-
-    async function updateAllStatuses() {
-      // 1. Magento status
-      const magentoOnline = await checkService(`http://${prefix}.localhost/`);
-      updateHeaderDot(magentoOnline);
-      updateCardStatus(0, magentoOnline);
-
-      // 2. MySQL (Direct TCP 3306 fetch fails, but is assumed up if Magento is reachable)
-      updateCardStatus(1, magentoOnline);
-
-      // 3. Nginx
-      const nginxOnline = await checkService("/");
-      updateCardStatus(2, nginxOnline);
-
-      // 4. OpenSearch
-      const opensearchOnline = await checkService("http://localhost:9200/");
-      updateCardStatus(3, opensearchOnline);
-
-      // 5. Mailpit
-      const mailpitOnline = await checkService("http://mailpit.localhost/");
-      updateCardStatus(4, mailpitOnline);
-    }
-
-    function updateHeaderDot(isOnline) {
-      const el = document.getElementById("header-status-dot");
-      if (!el) return;
-      if (isOnline) {
-        el.className = "inline-block w-2.5 h-2.5 rounded-full bg-spectrum-success animate-pulse";
-        document.getElementById("title").textContent = prefix;
-      } else {
-        el.className = "inline-block w-2.5 h-2.5 rounded-full bg-spectrum-error";
-        document.getElementById("title").textContent = `${prefix} (OFFLINE)`;
-      }
-    }
-
-    function updateCardStatus(index, isOnline) {
-      const card = document.getElementById(`card-container-${index}`);
-      if (!card) return;
-      const dot = document.getElementById(`card-status-dot-${index}`);
-      const text = document.getElementById(`card-status-text-${index}`);
-
-      if (isOnline) {
-        card.dataset.online = "true";
-        if (dot) {
-          dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-spectrum-success animate-none";
-        }
-        if (text) {
-          text.textContent = "Active";
-          text.className = "text-[10px] font-bold text-spectrum-success uppercase tracking-wider";
-        }
-      } else {
-        card.dataset.online = "false";
-        if (dot) {
-          dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-spectrum-error animate-none";
-        }
-        if (text) {
-          text.textContent = "Offline";
-          text.className = "text-[10px] font-bold text-spectrum-error uppercase tracking-wider";
-        }
-      }
-    }
-
-    // Run dynamic status verification on load and every 5 seconds
-    updateAllStatuses();
-    setInterval(updateAllStatuses, 5000);
-  </script>
-
+  <!-- Config and Application Scripts -->
+  <script src="/config.js"></script>
+  <script src="app.js"></script>
 </body>
-
 </html>

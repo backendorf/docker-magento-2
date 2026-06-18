@@ -1,7 +1,39 @@
 #!/bin/bash
 set -eo pipefail
 
-# function to load and evaluate .env
+# ANSI color codes for cleaner output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+warn() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+open_browser() {
+    local url="$1"
+    if command -v xdg-open >/dev/null 2>&1; then
+        xdg-open "$url" >/dev/null 2>&1 &
+    elif command -v open >/dev/null 2>&1; then
+        open "$url" >/dev/null 2>&1 &
+    fi
+}
+
+# Load configuration from .env
 load_env() {
     if [ -f .env ]; then
         set -a
@@ -11,40 +43,83 @@ load_env() {
         MAGENTO_BASE_URL=$(eval echo "$MAGENTO_BASE_URL")
         MYSQL_DATABASE=$(eval echo "$MYSQL_DATABASE")
         MAGENTO_ADMIN_FRONTNAME=$(eval echo "$MAGENTO_ADMIN_FRONTNAME")
+        PHP_VERSION=$(eval echo "$PHP_VERSION")
     else
-        echo "❌ .env file not found! Please create it before running install."
+        error ".env file not found! Please create it before running install."
         exit 1
     fi
 }
 
+# Clean html directory
+clear_html() {
+    info "Clearing html/ directory..."
+    if docker compose ps --status running 2>/dev/null | grep -q "php"; then
+        docker compose exec -T php sudo find /var/www/html -mindepth 1 -delete 2>/dev/null || true
+    else
+        sudo rm -rf html/* html/.[!.]* 2>/dev/null || rm -rf html/* html/.[!.]* 2>/dev/null || true
+    fi
+    success "html/ directory cleared."
+}
+
 load_env
 
-# ── 1. Check if Magento is already installed (no container needed) ────────────
+# 1. Check for existing/partial installation
 if [ -f html/app/etc/env.php ]; then
-    echo "⚠️  Magento is already installed in this environment!"
+    warn "Magento is already installed in this environment!"
     read -p "Do you want to reinstall it from scratch? (y/n): " REINSTALL
     if [ "$REINSTALL" != "y" ]; then
-        echo "❌ Installation aborted."
+        error "Installation aborted."
         exit 0
     fi
-    echo "🧹 Clearing current installation for a fresh start..."
-    rm -rf html/*  html/.[!.]* 2>/dev/null || true
+    clear_html
+elif [ -f html/composer.json ]; then
+    warn "Found a previous (incomplete) installation in html/."
+    read -p "Do you want to clear it and start fresh? (y/n): " REINSTALL
+    if [ "$REINSTALL" != "y" ]; then
+        error "Installation aborted."
+        exit 0
+    fi
+    clear_html
 fi
 
-# ── 2. Override Store Prefix ──────────────────────────────────────────────────
+# 2. Store Prefix config
 read -p "Enter Store Prefix [default: $STORE_PREFIX]: " INPUT_PREFIX
-if [ ! -z "$INPUT_PREFIX" ]; then
+if [ -n "$INPUT_PREFIX" ]; then
     STORE_PREFIX=$INPUT_PREFIX
-    echo "📝 Updating .env with new STORE_PREFIX: $STORE_PREFIX"
     sed -i "s/^STORE_PREFIX=.*/STORE_PREFIX=$STORE_PREFIX/" .env
+    info "STORE_PREFIX updated to: $STORE_PREFIX"
     load_env
 fi
 
-# ── 3. Ask for distribution ───────────────────────────────────────────────────
+# 3. PHP Version selection
 echo ""
-echo "Which distribution do you want to install?"
+echo "Select PHP version:"
+echo "  1) 8.4-fpm (recommended for Magento 2.4.8+)"
+echo "  2) 8.3-fpm (recommended for Magento 2.4.7+)"
+echo "  3) 8.2-fpm (Magento 2.4.6 - 2.4.7)"
+echo "  4) 8.1-fpm (Magento 2.4.4 - 2.4.6)"
+read -p "Choose [1, 2, 3 or 4, default: 2]: " PHP_CHOICE
+PHP_CHOICE=${PHP_CHOICE:-2}
+
+case "$PHP_CHOICE" in
+    1) SELECTED_PHP="8.4-fpm" ;;
+    2) SELECTED_PHP="8.3-fpm" ;;
+    3) SELECTED_PHP="8.2-fpm" ;;
+    4) SELECTED_PHP="8.1-fpm" ;;
+    *) SELECTED_PHP="8.3-fpm" ;;
+esac
+
+if [ "$SELECTED_PHP" != "$PHP_VERSION" ]; then
+    sed -i "s/^PHP_VERSION=.*/PHP_VERSION=$SELECTED_PHP/" .env
+    load_env
+fi
+info "PHP version set to: $SELECTED_PHP"
+
+# 4. Distribution selection
+echo ""
+echo "Select Magento distribution:"
 echo "  1) Magento (official Adobe repository)"
-echo "  2) Mage-OS (community fork)"
+echo "  2) Mage-OS (community fork - no auth required)"
 read -p "Choose [1 or 2, default: 1]: " DISTRO_CHOICE
 DISTRO_CHOICE=${DISTRO_CHOICE:-1}
 
@@ -57,15 +132,54 @@ else
     COMPOSER_PACKAGE="magento/project-community-edition"
     DISTRO_LABEL="Magento (official)"
 fi
+info "Distribution selected: $DISTRO_LABEL"
 
-echo "📦 Distribution selected: $DISTRO_LABEL"
-
-# ── 4. Ask for version ────────────────────────────────────────────────────────
+# 5. Version configuration
 read -p "Enter Magento version (leave empty for latest): " VERSION
 
-# ── 5. Ask for theme ──────────────────────────────────────────────────────────
+# 5a. Version compatibility check
+if [ -n "$VERSION" ]; then
+    MAGE_MINOR=$(echo "$VERSION" | cut -d. -f2)
+    MAGE_PATCH=$(echo "$VERSION" | cut -d. -f3)
+    PHP_MAJOR_MINOR=$(echo "$SELECTED_PHP" | grep -o '^[0-9]\+\.[0-9]\+')
+
+    COMPATIBLE=true
+    RECOMMENDED_PHP=""
+
+    if [ "$MAGE_MINOR" -eq 4 ] 2>/dev/null; then
+        if [ "$MAGE_PATCH" -le 3 ] 2>/dev/null; then
+            [[ "$PHP_MAJOR_MINOR" != "7.4" && "$PHP_MAJOR_MINOR" != "8.0" ]] && COMPATIBLE=false && RECOMMENDED_PHP="8.0-fpm"
+        elif [ "$MAGE_PATCH" -le 5 ] 2>/dev/null; then
+            [[ "$PHP_MAJOR_MINOR" != "8.1" ]] && COMPATIBLE=false && RECOMMENDED_PHP="8.1-fpm"
+        elif [ "$MAGE_PATCH" -eq 6 ] 2>/dev/null; then
+            [[ "$PHP_MAJOR_MINOR" != "8.1" && "$PHP_MAJOR_MINOR" != "8.2" ]] && COMPATIBLE=false && RECOMMENDED_PHP="8.2-fpm"
+        elif [ "$MAGE_PATCH" -eq 7 ] 2>/dev/null; then
+            [[ "$PHP_MAJOR_MINOR" != "8.2" && "$PHP_MAJOR_MINOR" != "8.3" ]] && COMPATIBLE=false && RECOMMENDED_PHP="8.3-fpm"
+        elif [ "$MAGE_PATCH" -ge 8 ] 2>/dev/null; then
+            [[ "$PHP_MAJOR_MINOR" != "8.3" && "$PHP_MAJOR_MINOR" != "8.4" ]] && COMPATIBLE=false && RECOMMENDED_PHP="8.4-fpm"
+        fi
+    fi
+
+    if [ "$COMPATIBLE" = false ]; then
+        warn "PHP $PHP_MAJOR_MINOR is not compatible with Magento $VERSION."
+        info "Recommended: $RECOMMENDED_PHP"
+        read -p "Switch to $RECOMMENDED_PHP automatically? (y/n): " SWITCH_PHP
+        if [ "$SWITCH_PHP" == "y" ]; then
+            SELECTED_PHP="$RECOMMENDED_PHP"
+            sed -i "s/^PHP_VERSION=.*/PHP_VERSION=$SELECTED_PHP/" .env
+            load_env
+            success "PHP version updated to $SELECTED_PHP"
+        else
+            warn "Continuing with PHP $PHP_MAJOR_MINOR — installation may fail."
+        fi
+    else
+        success "PHP $PHP_MAJOR_MINOR is compatible with Magento $VERSION."
+    fi
+fi
+
+# 6. Theme selection
 echo ""
-echo "Which theme do you want to use?"
+echo "Select theme to install:"
 echo "  1) Luma (default Magento theme)"
 echo "  2) Hyvä"
 read -p "Choose [1 or 2, default: 2]: " THEME_CHOICE
@@ -73,149 +187,198 @@ THEME_CHOICE=${THEME_CHOICE:-2}
 
 if [ "$THEME_CHOICE" == "2" ]; then
     echo ""
-    echo "🎨 Hyvä selected! Please provide your Hyvä repository URL."
-    echo "   Find it at: https://hyva-themes.repo.packagist.com (e.g. https://hyva-themes.repo.packagist.com/your-project/)"
+    info "Hyvä selected. Please provide your repository details."
+    echo "Refer to: https://hyva-themes.repo.packagist.com"
     read -p "Repository URL: " HYVA_REPO_URL
     read -p "Token (license key): " HYVA_TOKEN
-
     if [ -z "$HYVA_REPO_URL" ] || [ -z "$HYVA_TOKEN" ]; then
-        echo "❌ Repository URL and token are required for Hyvä. Aborting."
+        error "Repository URL and token are required for Hyvä. Aborting."
         exit 1
     fi
 fi
 
-# ── 6. Ask for sample data ────────────────────────────────────────────────────
+# 7. Adobe/Magento Marketplace credentials
+AUTH_JSON_PATH="docker/auth.json"
+
+if [ "$DISTRO_CHOICE" != "2" ]; then
+    if [ -f "$AUTH_JSON_PATH" ]; then
+        info "Found existing auth.json. Skipping credentials prompt."
+    else
+        echo ""
+        info "Magento Marketplace credentials required."
+        echo "Create them here: https://marketplace.magento.com -> My Profile -> Access Keys"
+        echo ""
+        read -p "Public Key (username):  " MAGENTO_PUBLIC_KEY
+        read -s -p "Private Key (password): " MAGENTO_PRIVATE_KEY
+        echo ""
+
+        if [ -z "$MAGENTO_PUBLIC_KEY" ] || [ -z "$MAGENTO_PRIVATE_KEY" ]; then
+            error "Credentials are required. Aborting."
+            exit 1
+        fi
+
+        cat > "$AUTH_JSON_PATH" <<JSON
+{
+    "http-basic": {
+        "repo.magento.com": {
+            "username": "$MAGENTO_PUBLIC_KEY",
+            "password": "$MAGENTO_PRIVATE_KEY"
+        }
+    }
+}
+JSON
+        success "Credentials saved to $AUTH_JSON_PATH"
+    fi
+fi
+
+# 8. Sample data option
 read -p "Install sample data? (y/n) [default: n]: " INSTALL_SAMPLE_DATA
 INSTALL_SAMPLE_DATA=${INSTALL_SAMPLE_DATA:-n}
 
-# ── 7. Start containers ───────────────────────────────────────────────────────
+# 9. Spin up docker containers
 echo ""
-echo "🐳 Starting containers..."
-docker compose up -d --remove-orphans
+info "Starting Docker containers..."
+docker compose up -d --remove-orphans --build
 
-# ── 8. Ensure directory permissions ──────────────────────────────────────────
-echo "🔐 Checking directory permissions..."
+# 10. Set directory permissions
+info "Configuring directory permissions..."
 docker compose exec -T php sudo chown -R app:app /var/www/html
 
-# ── 9. Handle partial installs ────────────────────────────────────────────────
-IS_EMPTY=$(docker compose exec -T php ls -A /var/www/html | tr -d '\r')
-
-if [ ! -z "$IS_EMPTY" ]; then
-    HAS_COMPOSER=$(docker compose exec -T php [ -f /var/www/html/composer.json ] && echo "yes" || echo "no" | tr -d '\r')
-    HAS_BIN_MAGENTO=$(docker compose exec -T php [ -f /var/www/html/bin/magento ] && echo "yes" || echo "no" | tr -d '\r')
-
-    if [ "$HAS_COMPOSER" == "yes" ] && [ "$HAS_BIN_MAGENTO" == "no" ]; then
-        echo "⚠️  Found composer.json but bin/magento is missing. Completing installation..."
-        docker compose exec php composer install
-    elif [ "$HAS_COMPOSER" == "no" ]; then
-        echo "⚠️  Directory /var/www/html is not empty and no composer.json found!"
-        read -p "Do you want to clear it and continue? (y/n): " CLEAR
-        if [ "$CLEAR" == "y" ]; then
-            echo "🧹 Clearing directory..."
-            docker compose exec -T php find /var/www/html -mindepth 1 -delete
-        else
-            echo "❌ Installation aborted."
-            exit 1
-        fi
-    fi
+# 11. Copy auth.json config
+if [ -f "$AUTH_JSON_PATH" ]; then
+    info "Copying auth.json into container..."
+    docker compose exec -T php mkdir -p /var/www/.composer
+    docker cp "$AUTH_JSON_PATH" $(docker compose ps -q php):/var/www/.composer/auth.json
+    docker compose exec -T php sudo chown app:app /var/www/.composer/auth.json
 fi
 
-# ── 10. Download Magento via Composer ─────────────────────────────────────────
-if ! docker compose exec -T php [ -f /var/www/html/composer.json ]; then
-    echo "📦 Downloading Magento files via Composer..."
+# 12. Magento installation via composer
+if ! docker compose exec -T php test -f /var/www/html/composer.json; then
+    info "Downloading Magento codebase via Composer..."
 
     if [ -z "$VERSION" ]; then
-        echo "🔹 No version specified, installing latest from $DISTRO_LABEL..."
-        docker compose exec php composer create-project --repository-url=$COMPOSER_REPO $COMPOSER_PACKAGE . --no-install
+        info "Installing latest $DISTRO_LABEL..."
+        docker compose exec php composer create-project \
+            --repository-url="$COMPOSER_REPO" \
+            "$COMPOSER_PACKAGE" . --no-install
     else
-        echo "🔹 Installing version $VERSION from $DISTRO_LABEL..."
-        docker compose exec php composer create-project --repository-url=$COMPOSER_REPO $COMPOSER_PACKAGE:$VERSION . --no-install
+        info "Installing $DISTRO_LABEL $VERSION..."
+        docker compose exec php composer create-project \
+            --repository-url="$COMPOSER_REPO" \
+            "$COMPOSER_PACKAGE:$VERSION" . --no-install
     fi
-
-    docker compose exec php composer install
 fi
 
-# Ensure bin/magento is executable
+# Disable security advisory blocking for older packages
+docker compose exec -T php composer config audit.block-insecure false
+
+info "Running composer install..."
+docker compose exec php composer install
+
+# 13. Ensure magento binary is executable
 docker compose exec -T php chmod +x bin/magento
 
-# ── 11. Install Hyvä if selected ──────────────────────────────────────────────
+# 14. Configure Hyvä Theme repository and run setup
 if [ "$THEME_CHOICE" == "2" ]; then
-    echo "🎨 Configuring Hyvä Packagist repository..."
+    info "Configuring Hyvä Packagist repository..."
     docker compose exec php composer config --auth http-basic.hyva-themes.repo.packagist.com token "$HYVA_TOKEN"
     docker compose exec php composer config repositories.hyva-themes composer "$HYVA_REPO_URL"
 
-    echo "🎨 Installing Hyvä theme..."
+    info "Requiring Hyvä Theme dependencies..."
     docker compose exec php composer require hyva-themes/magento2-default-theme
 
-    echo "🎨 Enabling Hyvä modules and setting theme..."
+    info "Enabling Hyvä modules..."
     docker compose exec php bin/magento setup:upgrade
-
-    HYVA_THEME_ID=$(docker compose exec -T db sh -c \
-        "mysql -u root -p\"\$MYSQL_ROOT_PASSWORD\" \"\$MYSQL_DATABASE\" -sN -e \"SELECT theme_id FROM theme WHERE theme_path='Hyva/default' LIMIT 1;\"")
-
-    if [ ! -z "$HYVA_THEME_ID" ]; then
-        docker compose exec php bin/magento config:set design/theme/theme_id "$HYVA_THEME_ID"
-        echo "✅ Hyvä theme set (ID: $HYVA_THEME_ID)"
-    else
-        echo "⚠️  Could not find Hyvä theme ID. Set it manually in Admin > Content > Design > Configuration."
-    fi
 fi
 
-# ── 12. Deploy sample data if requested ───────────────────────────────────────
+# 15. Deploy sample data if required
 if [ "$INSTALL_SAMPLE_DATA" == "y" ]; then
-    echo "📊 Deploying Sample Data..."
+    info "Deploying Magento sample data..."
     docker compose exec php bin/magento sampledata:deploy
 fi
 
-# ── 13. Ensure database exists ────────────────────────────────────────────────
-echo "🏗️  Ensuring database ${MYSQL_DATABASE} exists..."
+# 16. Database setup validation
+info "Ensuring target database (${MYSQL_DATABASE}) exists..."
 docker compose exec -T db sh -c "mysql -u root -p\"\$MYSQL_ROOT_PASSWORD\" -e \"CREATE DATABASE IF NOT EXISTS $MYSQL_DATABASE;\""
 
-# ── 14. Run Magento setup:install ─────────────────────────────────────────────
-echo "🏗️  Starting Magento installation..."
+# 17. Search engine configuration detection
+MAGE_VERSION=$(docker compose exec -T php bin/magento --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+MAGE_MINOR=$(echo "$MAGE_VERSION" | cut -d. -f2)
+MAGE_PATCH=$(echo "$MAGE_VERSION" | cut -d. -f3)
+info "Detected Magento version: $MAGE_VERSION"
 
-EXTRA_OPTS=""
-if [ "$INSTALL_SAMPLE_DATA" == "y" ]; then
-    EXTRA_OPTS="--use-sample-data"
-fi
-
-docker compose exec php bin/magento setup:install \
---base-url=${MAGENTO_BASE_URL} \
---db-host=db \
---db-name=${MYSQL_DATABASE} \
---db-user=root \
---db-password=${MYSQL_ROOT_PASSWORD} \
---admin-firstname=${MAGENTO_ADMIN_FIRSTNAME} \
---admin-lastname=${MAGENTO_ADMIN_LASTNAME} \
---admin-email=${MAGENTO_ADMIN_EMAIL} \
---admin-user=${MAGENTO_ADMIN_USER} \
---admin-password=${MAGENTO_ADMIN_PASSWORD} \
---language=${MAGENTO_LANGUAGE} \
---currency=${MAGENTO_CURRENCY} \
---timezone=${MAGENTO_TIMEZONE} \
---use-rewrites=1 \
---search-engine=opensearch \
+if [ "$MAGE_MINOR" -gt 4 ] || { [ "$MAGE_MINOR" -eq 4 ] && [ "$MAGE_PATCH" -ge 6 ]; }; then
+    SEARCH_ENGINE="opensearch"
+    SEARCH_OPTS="--search-engine=opensearch \
 --opensearch-host=opensearch \
 --opensearch-port=9200 \
 --opensearch-index-prefix=${STORE_PREFIX} \
---opensearch-timeout=15 \
---backend-frontname=${MAGENTO_ADMIN_FRONTNAME} \
-$EXTRA_OPTS
+--opensearch-timeout=15"
+else
+    SEARCH_ENGINE="elasticsearch7"
+    SEARCH_OPTS="--search-engine=elasticsearch7 \
+--elasticsearch-host=opensearch \
+--elasticsearch-port=9200 \
+--elasticsearch-index-prefix=${STORE_PREFIX} \
+--elasticsearch-timeout=15"
+fi
+info "Configuring search engine: $SEARCH_ENGINE"
 
-# ── 15. Disable 2FA (dev environment) ────────────────────────────────────────
-echo "🔓 Disabling Two-Factor Authentication..."
+# 18. Running magento installer
+info "Initializing Magento installation..."
+
+EXTRA_OPTS=""
+[ "$INSTALL_SAMPLE_DATA" == "y" ] && EXTRA_OPTS="--use-sample-data"
+
+docker compose exec php bin/magento setup:install \
+    --base-url="${MAGENTO_BASE_URL}" \
+    --db-host=db \
+    --db-name="${MYSQL_DATABASE}" \
+    --db-user=root \
+    --db-password="${MYSQL_ROOT_PASSWORD}" \
+    --admin-firstname="${MAGENTO_ADMIN_FIRSTNAME}" \
+    --admin-lastname="${MAGENTO_ADMIN_LASTNAME}" \
+    --admin-email="${MAGENTO_ADMIN_EMAIL}" \
+    --admin-user="${MAGENTO_ADMIN_USER}" \
+    --admin-password="${MAGENTO_ADMIN_PASSWORD}" \
+    --language="${MAGENTO_LANGUAGE}" \
+    --currency="${MAGENTO_CURRENCY}" \
+    --timezone="${MAGENTO_TIMEZONE}" \
+    --use-rewrites=1 \
+    --backend-frontname="${MAGENTO_ADMIN_FRONTNAME}" \
+    $SEARCH_OPTS \
+    $EXTRA_OPTS
+
+# 19. Enable Hyvä theme in database
+if [ "$THEME_CHOICE" == "2" ]; then
+    HYVA_THEME_ID=$(docker compose exec -T db sh -c \
+        "mysql -u root -p\"\$MYSQL_ROOT_PASSWORD\" \"\$MYSQL_DATABASE\" -sN -e \"SELECT theme_id FROM theme WHERE theme_path='Hyva/default' LIMIT 1;\"")
+    if [ -n "$HYVA_THEME_ID" ]; then
+        docker compose exec php bin/magento config:set design/theme/theme_id "$HYVA_THEME_ID"
+        success "Hyvä theme enabled (ID: $HYVA_THEME_ID)"
+    else
+        warn "Could not resolve Hyvä theme ID. Please configure manually in admin panel."
+    fi
+fi
+
+# 20. Disable Two-Factor Authentication
+info "Disabling Magento 2FA modules..."
 docker compose exec php bin/magento module:disable Magento_AdminAdobeImsTwoFactorAuth Magento_TwoFactorAuth
 
-# ── 16. Reload Nginx ──────────────────────────────────────────────────────────
-echo "🔄 Starting/Reloading Nginx..."
+# 21. Restart web server
+info "Reloading Nginx service..."
 docker compose up -d nginx
 
-# ── 16. Summary ───────────────────────────────────────────────────────────────
+# Summary
 echo ""
-echo "✅ Everything is ready!!"
+success "Installation process completed successfully!"
+echo -e "--------------------------------------------------"
+echo -e "Store URL:   ${BLUE}${MAGENTO_BASE_URL}${NC}"
+echo -e "Admin URL:   ${BLUE}${MAGENTO_BASE_URL}${MAGENTO_ADMIN_FRONTNAME}${NC}"
+echo -e "User:        ${YELLOW}${MAGENTO_ADMIN_USER}${NC}"
+echo -e "Password:    ${YELLOW}${MAGENTO_ADMIN_PASSWORD}${NC}"
+echo -e "--------------------------------------------------"
 echo ""
-echo "🛒 Store URL:   ${MAGENTO_BASE_URL}"
-echo "🔧 Admin URL:   ${MAGENTO_BASE_URL}${MAGENTO_ADMIN_FRONTNAME}"
-echo "👤 Admin user:  ${MAGENTO_ADMIN_USER}"
-echo "🔑 Admin pass:  ${MAGENTO_ADMIN_PASSWORD}"
-echo ""
+
+# Open store in browser
+open_browser "${MAGENTO_BASE_URL}"
