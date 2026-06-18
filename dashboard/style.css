@@ -103,7 +103,7 @@ a {
   text-decoration: none;
   transition: color var(--transition-fast);
 }
-a:hover {
+a:hover:not(.btn-open-link):not(.btn-modal-action) {
   color: var(--color-accent-hover);
   text-decoration: underline;
 }
